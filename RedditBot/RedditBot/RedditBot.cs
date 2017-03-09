@@ -18,7 +18,7 @@ namespace RedditBot
             _clientName = clientName;
         }
 
-        public bool Authenticate(string redditUsername, string redditPassword, string clientId, string clientSecret)
+        public RedditAccessToken Authenticate(string redditUsername, string redditPassword, string clientId, string clientSecret)
         {
             using (var client = new HttpClient())
             {
@@ -49,12 +49,13 @@ namespace RedditBot
                 // Update AuthorizationHeader
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("bearer", accessToken);
 
-                client.GetAsync("https://oauth.reddit.com/api/v1/me").GetAwaiter().GetResult();
                 responseData = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                 Console.WriteLine(responseData);
 
-                return true;
+                RedditAccessToken token = new RedditAccessToken(responseData);
+
+                return token;
 
             }
         }
