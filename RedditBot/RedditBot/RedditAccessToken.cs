@@ -10,17 +10,22 @@ namespace RedditBot
 {
     class RedditAccessToken
     {
-        public string accessToken { get; private set; }
+        public string AccessToken { get; private set; }
         public string tokenType;
         public string scope;
         public DateTime createdAt;
         public int expiresInSeconds;
 
+        public RedditAccessToken()
+        {
+       
+        }
+
         public RedditAccessToken(string tokenAsString)
         {
             createdAt = DateTime.Now;
 
-            accessToken = JObject.Parse(tokenAsString).SelectToken("access_token").ToString();
+            AccessToken = JObject.Parse(tokenAsString).SelectToken("access_token").ToString();
             tokenType = JObject.Parse(tokenAsString).SelectToken("token_type").ToString();
             scope = JObject.Parse(tokenAsString).SelectToken("scope").ToString();
             expiresInSeconds = Convert.ToInt32(JObject.Parse(tokenAsString).SelectToken("expires_in").ToString());
