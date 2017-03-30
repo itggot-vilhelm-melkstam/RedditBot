@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace RedditBot
 {
@@ -58,13 +59,13 @@ namespace RedditBot
 
             RedditAccessToken token = new RedditAccessToken(responseData);
 
-            Console.WriteLine();
+            Console.WriteLine("-- Authentication OK! --");
+            Console.WriteLine("\n\n");
 
             return token;
-
            
-            
         }
+
 
         public async Task<HttpResponseMessage> GetRequestAsync(string method)
         {
@@ -79,41 +80,95 @@ namespace RedditBot
                 return new HttpResponseMessage(new System.Net.HttpStatusCode());
             }
         }
-        
 
-
-        public String GetPostsFromSubreddit(string subreddit)
+        public async Task<HttpResponseMessage> PostRequestAsync(string method, HttpContent content)
         {
-            var response = GetRequestAsync($"https://oauth.reddit.com/r/{subreddit}/new.json?sort=new&limit=5").GetAwaiter().GetResult();
-
-            if (response.StatusCode.ToString() == "OK")
+            if (throttler.RequestIsAllowed())
             {
-                var data = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult()).SelectToken("data").ToString();
-                return data;
-            }else
-            {
-                return "";
-            }
-        }
-
-        public Array GetCommentsFromPost(string fullname)
-        {
-            var response = GetRequestAsync($"https://oauth.reddit.com/t3_{fullname}.json").GetAwaiter().GetResult();
-
-
-            if (response.StatusCode.ToString() == "OK")
-            {
-                var data = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult()).SelectToken("data").ToArray();
-                Console.WriteLine(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-                return data;
+                Console.WriteLine($"OK: {method}");
+                return await client.PostAsync(method, content);
             }
             else
             {
-                String[] empty = new String[0];
-                return empty;
+                Console.WriteLine($"Not accepted: {method}");
+                return new HttpResponseMessage(new System.Net.HttpStatusCode());
             }
         }
 
+
+        public async Task<HttpResponseMessage> PostCommentWikipediaSummaryAsync(JToken post)
+        {
+
+            var formData = new Dictionary<string, string>{
+                { "api_type", "json" },
+                { "text", "this is a test" },
+                { "thing_id",  post.SelectToken("data.name").ToString()}
+            };
+
+            var encodedFormData = new FormUrlEncodedContent(formData);
+
+
+            Console.WriteLine("Posted comment on: https://reddit.com" + post.SelectToken("data.permalink"));
+
+            var response = await PostRequestAsync("https://oauth.reddit.com/api/comment", encodedFormData);
+
+            return response;
+        }
+
+        public async Task<JArray> GetUnansweredWikipediaLinksFromSubredditAsync(string subreddit)
+        {
+            var response = await GetRequestAsync($"https://oauth.reddit.com/r/{subreddit}/new.json?sort=new&limit=100");
+
+            if (response.StatusCode.ToString() == "OK")
+            {
+                var data = JObject.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult()).SelectToken("data");
+                var links = new JArray();
+                var posts = JArray.Parse(JObject.Parse(data.ToString()).SelectToken("children").ToString());
+
+                foreach (var post in posts.Children())
+                {
+                    if ((Regex.Match(post.SelectToken("data.domain").ToString(), @"[a-z -]+.wikipedia.org").Success) && (HasCommentedOnPostAsync(post, _clientName).GetAwaiter().GetResult() == false))
+                    {
+                        links.Add(post);
+                    }
+                }
+                return links;
+            }else
+            {
+                return new JArray();
+            }
+        }
+        
+        public async Task<JArray> GetCommentsFromPostAsync(JToken post)
+        {
+            string permalink = post.SelectToken("data.permalink").ToString();
+
+            var response = await GetRequestAsync($"https://oauth.reddit.com/{permalink}/.json");
+            if (response.StatusCode.ToString() == "OK")
+            {
+                var data = JArray.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                data.Remove(data.First);
+                var comments = JArray.Parse(data.First.SelectToken("data.children").ToString());
+                return comments;
+            }
+            else
+            {
+                return new JArray();
+            }
+        }
+
+        public async Task<bool> HasCommentedOnPostAsync(JToken post, string username)
+        {
+            var comments = await GetCommentsFromPostAsync(post);
+            foreach (var comment in comments)
+            {
+                if (comment.SelectToken("data.author").ToString() == username)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
     }
 }

@@ -13,16 +13,19 @@ namespace RedditBot
     {
         static void Main(string[] args)
         {
-            var redditBot = new RedditBot("anna_bot");
+            var redditBot = new RedditBot("WikiBot");
 
             redditBot.Authenticate("itggot-vilhelm", "6wm1MJBmHD7J", "56QyJLn_eRVwpA", "cEmNQOeLCfX4J5OawP5DfWGRr54");
 
 
-            var posts = redditBot.GetPostsFromSubreddit("sandboxtest");
-            var post = JObject.Parse(posts).SelectToken("children[0]").ToString();
-            Console.WriteLine(post);
+            var links = redditBot.GetUnansweredWikipediaLinksFromSubredditAsync("sandboxtest").GetAwaiter().GetResult();
+            //var post = links.First;
 
-            redditBot.GetCommentsFromPost(post);
+            Console.WriteLine(links.Count);
+
+            //var response = redditBot.PostCommentWikipediaSummaryAsync(post).GetAwaiter().GetResult();
+
+            //Console.WriteLine(response); 
 
             Console.ReadKey();
         }
