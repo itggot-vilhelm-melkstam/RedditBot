@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.IO;
 
 namespace RedditBot
 {
@@ -17,17 +18,30 @@ namespace RedditBot
 
             redditBot.Authenticate("itggot-vilhelm", "6wm1MJBmHD7J", "56QyJLn_eRVwpA", "cEmNQOeLCfX4J5OawP5DfWGRr54");
 
+            Random rand = new Random();
+            string[] wikis = File.ReadAllLines("C:\\DEV\\RedditBot\\RedditBot\\RedditBot\\wikipedia_subdomains.txt").OrderBy(x => rand.Next()).ToArray();
 
-            var links = redditBot.GetUnansweredWikipediaLinksFromSubredditAsync("sandboxtest").GetAwaiter().GetResult();
-            //var post = links.First;
+            while (true)
+            {
+                foreach (var wiki in wikis)
+                {
+                    Console.BackgroundColor = ConsoleColor.Blue;
+                    Console.WriteLine("WIKI: " + wiki);
+                    Console.ResetColor();
 
-            Console.WriteLine(links.Count);
+                    var links = redditBot.GetWikipediaLinksFromDomainAsync(wiki + ".wikipedia.org").GetAwaiter().GetResult();
+                    foreach (var link in links)
+                    {
+                        if (redditBot.HasCommentedOnPostAsync(link).GetAwaiter().GetResult() == false)
+                        {
+                            redditBot.PostCommentWikipediaSummaryAsync(link).GetAwaiter().GetResult();
+                        }
 
-            //var response = redditBot.PostCommentWikipediaSummaryAsync(post).GetAwaiter().GetResult();
+                    }
 
-            //Console.WriteLine(response); 
-
-            Console.ReadKey();
+                    Console.WriteLine("\n");
+                }
+            }
         }
     }
 }

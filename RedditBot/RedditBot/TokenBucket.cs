@@ -40,5 +40,17 @@ namespace RedditBot
             }
             return false;
         }
+
+        public int MillisecondsTilRefill()
+        {
+            if (DateTime.Now.Subtract(lastRefreshed).TotalSeconds >= interval)
+            {
+                return 0;
+            }
+            else
+            {
+                return (interval * 1000) - Convert.ToInt32(DateTime.Now.Subtract(lastRefreshed).TotalMilliseconds);
+            }
+        }
     }
 }

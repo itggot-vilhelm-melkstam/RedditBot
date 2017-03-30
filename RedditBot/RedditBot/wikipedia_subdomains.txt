@@ -1,0 +1,14 @@
+﻿en
+se
+fr
+de
+ceb
+es
+ru
+it
+de
+ja
+vi
+pl
+nl
+war
